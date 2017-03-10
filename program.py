@@ -235,7 +235,7 @@ if __name__ == "__main__":
         if choice == 4:
             break
         if choice == 1:
-            check_filename = str(input("Write the filename that you want to correct any spelling errors: ").strip())
+            check_filename = str(input("Write the file name (or file path) that you want to correct any spelling errors: ").strip())
             while os.path.isfile(check_filename) == False:
                 check_filename = str(input("Please input the right file name that is accessable: ").strip())
             file_spell_checker(check_filename)
