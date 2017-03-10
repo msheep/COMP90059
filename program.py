@@ -7,7 +7,6 @@ import os, re
 import string
 from collections import Counter
 import codecs
-from edit_distance import levenshtein
 from nltk.stem.porter import PorterStemmer
 
 
@@ -26,6 +25,36 @@ stemmed_dict = set([stemmer.stem(word) for word in open(DICT_FILE).read().split(
 
 search_path = "documents"
 
+import numpy as np
+
+def levenshtein(s1, s2):
+    s1 = s1.lower()
+    s2 = s2.lower()
+    columns = len(s1) + 1
+    rows = len(s2) + 1
+
+    '''Construct a matrix with preset value of 0'''
+    matrix = np.zeros([columns, rows], np.int32)
+
+    for i in range(columns):
+        matrix[i][0] = i
+    for j in range(rows):
+        matrix[0][j] = j
+
+    for i in range(1, columns):
+        for j in range(1, rows):
+
+            delete_cost = matrix[i-1][j] + 1
+            insert_cost = matrix[i][j-1] + 1
+
+            if s1[i-1] != s2[j-1]:
+                replace_cost = matrix[i-1][j-1] + 1
+            else:
+                replace_cost = matrix[i-1][j-1]
+
+            matrix[i][j] = min(insert_cost, delete_cost, replace_cost)
+    
+    return matrix[columns-1][rows-1]
 
 def word_normalize(word) -> str:
     # remove punctuation characters
@@ -96,15 +125,24 @@ def word_spell_checker(orig_word, n=3, spelling_checker=if_spell_right):
     if spelling_checker(orig_word):
         spell_right = True
     else:
-        normalized_word, word_soundex = soundex(orig_word)
-        word_distances = Counter()
-        for dict_word in dictionary_soundex.get(word_soundex, []):
-            word_distances[dict_word] = levenshtein(normalized_word, dict_word)
+        # if the last character is not alphabetical, remove it
+        if re.match(r"\w+\W{1}$", orig_word) is not None:
+            word = orig_word[:-1]
+            if if_spell_right(word):
+                spell_right = True
+        else:
+            word = orig_word
 
-        if len(word_distances) > 0:
-            similar_words = word_distances.most_common()[::-1]
-            if n < 4:
-                similar_words = similar_words[:n]
+        if spell_right == False:
+            normalized_word, word_soundex = soundex(word)
+            word_distances = Counter()
+            for dict_word in dictionary_soundex.get(word_soundex, []):
+                word_distances[dict_word] = levenshtein(normalized_word, dict_word)
+
+            if len(word_distances) > 0:
+                similar_words = word_distances.most_common()[::-1]
+                if n < 4:
+                    similar_words = similar_words[:n]
 
     return spell_right, similar_words
 
@@ -163,8 +201,8 @@ def file_spell_checker(filename, stemming_enabled=False):
                                 except:
                                     corrected_word = word
 
-                            if is_last_alpha == True:
-                                corrected_word += orig_word[-1]
+                                if is_last_alpha == True:
+                                    corrected_word += orig_word[-1]
 
                         corrected_line.append(corrected_word)
 
