@@ -1,3 +1,5 @@
 Part of your tusk is to define the user interface, and decide how you will present available cerrections to the user, or what to do if the word is mis-speled and yau cannot suggest a correction.
 
 Saev the corrected text in to a new file, appendING -correctedc4 to the hilename. Thus, if the input file was essay.txt, tuen the output file should be essay-corrected.txt
+
+teenager

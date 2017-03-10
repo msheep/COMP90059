@@ -9,6 +9,8 @@ from collections import Counter
 import codecs
 from edit_distance import levenshtein
 from fuzzy_match import FuzzyMatcher
+from nltk.stem.porter import PorterStemmer
+
 
 coding_table = {'A': '0', 'E': '0', 'H': '0', 'I': '0',
                 'O': '0', 'U': '0', 'W': '0', 'Y': '0',
@@ -17,9 +19,11 @@ coding_table = {'A': '0', 'E': '0', 'H': '0', 'I': '0',
                 'Q': '2', 'S': '2', 'X': '2', 'Z': '2',
                 'D': '3', 'T': '3', 'L': '4', 'M': '5',
                 'N': '5', 'R': '6'}
+stemmer = PorterStemmer()
 
 DICT_FILE = '/usr/share/dict/words'
 dictionary = set([word.lower() for word in open(DICT_FILE).read().split()])
+stemmed_dict = set([stemmer.stem(word) for word in open(DICT_FILE).read().split()])
 
 search_path = "documents"
 
@@ -78,36 +82,35 @@ def if_spell_right(word) -> bool:
     else:
         return False
 
+def if_spell_right_with_stemming(word) -> bool:
+    if stemmer.stem(word_normalize(word)) in stemmed_dict:
+        return True
+    else:
+        return False
 
-def word_spell_checker(orig_word, n=3):
+def word_spell_checker(orig_word, n=3, spelling_checker=if_spell_right):
+    """
+    orig_word should be a word without punctuation.
+    """
     spell_right = False
     similar_words = None
-    if if_spell_right(orig_word):
+    if spelling_checker(orig_word):
         spell_right = True
     else:
-        # if the last character is not alphabetical, remove it
-        if re.match(r"\w+\W{1}$", orig_word) is not None:
-            word = orig_word[:-1]
-            if if_spell_right(word):
-                spell_right = True
-        else:
-            word = orig_word
+        normalized_word, word_soundex = soundex(orig_word)
+        word_distances = Counter()
+        for dict_word in dictionary_soundex.get(word_soundex, []):
+            word_distances[dict_word] = levenshtein(normalized_word, dict_word)
 
-        if spell_right == False:
-            normalized_word, word_soundex = soundex(word)
-            word_distances = Counter()
-            for dict_word in dictionary_soundex.get(word_soundex, []):
-                word_distances[dict_word] = levenshtein(normalized_word, dict_word)
-
-            if len(word_distances) > 0:
-                similar_words = word_distances.most_common()[::-1]
-                if n < 4:
-                    similar_words = similar_words[:n]
+        if len(word_distances) > 0:
+            similar_words = word_distances.most_common()[::-1]
+            if n < 4:
+                similar_words = similar_words[:n]
 
     return spell_right, similar_words
 
 
-def file_spell_checker(filename):
+def file_spell_checker(filename, stemming_enabled=False):
     corrected_content = []
     with codecs.open(filename, 'r', encoding="utf-8") as lines:
         for line in lines:
@@ -116,7 +119,12 @@ def file_spell_checker(filename):
                 words = line.split()
                 if len(words) > 0:
                     for orig_word in words:
-                        spell_right, similar_words = word_spell_checker(orig_word, 3)
+                        preprocessed_word = word_normalize(orig_word)
+                        if stemming_enabled:
+                            spelling_checker = if_spell_right_with_stemming
+                        else:
+                            spelling_checker = if_spell_right
+                        spell_right, similar_words = word_spell_checker(preprocessed_word, 3, spelling_checker)
 
                         if spell_right == True:
                             corrected_word = orig_word
@@ -170,12 +178,9 @@ def file_spell_checker(filename):
         f.write('\n'.join(corrected_content))
     print("======== Finish writing the corrected content into the file %s. ========" % corrected_file)
 
-import string
-translator = str.maketrans('', '', string.punctuation)
-
 
 def search_engine(search_term):
-    spell_right, similar_words = word_spell_checker(search_term, 4)
+    spell_right, similar_words = word_spell_checker(word_normalize(search_term), 4)
     search_terms = []
     if spell_right == True:
         search_terms.append(search_term)
@@ -225,7 +230,7 @@ if __name__ == "__main__":
     while True:
         print("Please choose the module:")
         try:
-            choice = int(input("1.Spelling checker 2.Search 3.Fuzzy match 4.Exit\n"))
+            choice = int(input("1.Spelling checker 2.Search 3.Spelling checker with stemming 4.Exit\n"))
         except:
             print("Invalid choice! Please input the choice number.")
             continue
@@ -247,10 +252,7 @@ if __name__ == "__main__":
                 search_term = str(input("Please input a term that you want to search: ").strip())
             search_engine(search_term)
         elif choice == 3:
-            try:
-                target_file = str(input("Please input the file that the fuzzy macher will perform on:").strip())
-                matcher = FuzzyMatcher(target_file)
-                phrase = str(input("Please input the phrase you want to search:").strip())
-                print(matcher.match(phrase))
-            except FileNotFoundError:
-                print("Cannot open the file!")
+            check_filename = str(input("Write the file name (or file path) that you want to correct any spelling errors: ").strip())
+            while os.path.isfile(check_filename) == False:
+                check_filename = str(input("Please input the right file name that is accessable: ").strip())
+            file_spell_checker(check_filename, True)
