@@ -1,3 +1,0 @@
-Part of your tusk is to define the user interface, and decide how you will present available correction to the user, or what to do if the word is misplead and yaw cannot suggest a correction.
-
-sapa the corrected text in to a new file, appendix correctness to the helena. Thus, if the input file was eustatic ten the output file should be excrescent
