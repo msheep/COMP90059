@@ -6,6 +6,7 @@ import numpy as np
 import os, re
 import string
 from collections import Counter
+import codecs
 from edit_distance import levenshtein
 from fuzzy_match import FuzzyMatcher
 
@@ -108,7 +109,7 @@ def word_spell_checker(orig_word, n=3):
 
 def file_spell_checker(filename):
     corrected_content = []
-    with open(filename, 'r') as lines:
+    with codecs.open(filename, 'r', encoding="utf-8") as lines:
         for line in lines:
             if len(line) > 0:
                 corrected_line = []
@@ -165,7 +166,7 @@ def file_spell_checker(filename):
     # write into the *-corrected file
     fpath_name, ftext = os.path.splitext(filename)
     corrected_file = fpath_name + "-corrected" + ftext
-    with open(corrected_file, "w") as f:
+    with codecs.open(corrected_file, "w", encoding="utf-8") as f:
         f.write('\n'.join(corrected_content))
     print("======== Finish writing the corrected content into the file %s. ========" % corrected_file)
 
@@ -203,7 +204,7 @@ def search_engine(search_term):
     for file in search_files:
         if not os.path.isdir(file):
             fpath, fname = os.path.split(file)
-            with open(search_path+"/"+file, 'r') as lines:
+            with codecs.open(search_path+"/"+file, 'r', encoding="utf-8") as lines:
                 for line in lines:
                     orig_line_words = line.split()
                     line_words = []
