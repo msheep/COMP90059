@@ -7,6 +7,7 @@ import os, re
 import string
 from collections import Counter
 from edit_distance import levenshtein
+from fuzzy_match import FuzzyMatcher
 
 coding_table = {'A': '0', 'E': '0', 'H': '0', 'I': '0',
                 'O': '0', 'U': '0', 'W': '0', 'Y': '0',
@@ -100,7 +101,7 @@ def word_spell_checker(orig_word, n=3):
             if len(word_distances) > 0:
                 similar_words = word_distances.most_common()[::-1]
                 if n < 4:
-                    similar_words = similar_words[n]
+                    similar_words = similar_words[:n]
 
     return spell_right, similar_words
 
@@ -120,12 +121,14 @@ def file_spell_checker(filename):
                             corrected_word = orig_word
                         else:
                             if similar_words is None:
-                                print("\'%s\'seems to be incorrect. You have following choices:"% word)
+                                # The word is not in the dictionary, but we don't have any alternatives.
+                                print("\'%s\'seems to be incorrect. You have following choices:"% orig_word)
                                 choose_notice = "1. keep this word\n2. skip this word"
+                                choice_num = "x"
                                 while choice_num not in ["1", "2"]:
                                     choice_num = input("Your choice is invalid. Please choose again.\n" + choose_notice)
                                 if choice_num == 1:
-                                    corrected_word = word
+                                    corrected_word = orig_word
                                 else:
                                     corrected_word = ''
                             else:
@@ -139,7 +142,7 @@ def file_spell_checker(filename):
                                 # user interface and let user to choose the correct one
                                 print("\'%s\' seems to be incorrect. Do you mean?" % orig_word)
                                 choose_notice = ''
-                                for key, (choice_word, distance) in enumerate(similar_words):
+                                for key, (choice_word, _) in enumerate(similar_words):
                                     choose_notice += "%d. %s\n" % (key+1, choice_word)
                                 choose_notice += "4. keep this word\n"
                                 choice_num = input(choose_notice)
@@ -160,7 +163,7 @@ def file_spell_checker(filename):
                 corrected_content.append(' '.join(corrected_line))
 
     # write into the *-corrected file
-    fpath_name, ftext = os.path.splitext(check_filename)
+    fpath_name, ftext = os.path.splitext(filename)
     corrected_file = fpath_name + "-corrected" + ftext
     with open(corrected_file, "w") as f:
         f.write('\n'.join(corrected_content))
@@ -218,22 +221,35 @@ def search_engine(search_term):
 
 
 if __name__ == "__main__": 
-    # # The interactive spell checker 
-    # check_filename = str(input("Write the filename that you want to correct any spelling errors: ").strip())
-    # # check whether the file exist 
-    # while os.path.isfile(check_filename) == False:
-    #     check_filename = str(input("Please insert the right file name that is available to access: ").strip())
+    while True:
+        print("Please choose the module:")
+        try:
+            choice = int(input("1.Spelling checker 2.Search 3.Fuzzy match 4.Exit\n"))
+        except:
+            print("Invalid choice! Please input the choice number.")
+            continue
 
-    # file_spell_checker(check_filename)
-
-    # search engine
-    search_term = str(input("Please insert a term that you want to search: ").strip())
-    # term is not blank
-    while len(search_term) == 0:
-        search_term = str(input("Please insert a term that you want to search: ").strip())
-    search_engine(search_term)
-
-
-
-
-
+        if choice > 4 or choice < 1:
+            print("Invalid choice! Please input the choice number.")
+            continue
+        if choice == 4:
+            break
+        if choice == 1:
+            check_filename = str(input("Write the filename that you want to correct any spelling errors: ").strip())
+            while os.path.isfile(check_filename) == False:
+                check_filename = str(input("Please input the right file name that is accessable: ").strip())
+            file_spell_checker(check_filename)
+        elif choice == 2:
+            search_term = str(input("Please input a term that you want to search: ").strip())
+            # term is not blank
+            while len(search_term) == 0:
+                search_term = str(input("Please input a term that you want to search: ").strip())
+            search_engine(search_term)
+        elif choice == 3:
+            try:
+                target_file = str(input("Please input the file that the fuzzy macher will perform on:").strip())
+                matcher = FuzzyMatcher(target_file)
+                phrase = str(input("Please input the phrase you want to search:").strip())
+                print(matcher.match(phrase))
+            except FileNotFoundError:
+                print("Cannot open the file!")
