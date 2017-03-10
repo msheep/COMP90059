@@ -8,7 +8,6 @@ import string
 from collections import Counter
 import codecs
 from edit_distance import levenshtein
-from fuzzy_match import FuzzyMatcher
 from nltk.stem.porter import PorterStemmer
 
 
